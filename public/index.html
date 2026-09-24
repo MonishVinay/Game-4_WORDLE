@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Wordle Online Battle - 1-8 Players</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast hidden"></div>
+
+  <!-- VIEW 1: LOBBY / JOIN / CREATE -->
+  <div id="view-landing" class="view active">
+    <div class="landing-card">
+      <div class="game-logo">
+        <div class="logo-tile tile-green">W</div>
+        <div class="logo-tile tile-yellow">O</div>
+        <div class="logo-tile tile-gray">R</div>
+        <div class="logo-tile tile-green">D</div>
+        <div class="logo-tile tile-yellow">L</div>
+        <div class="logo-tile tile-green">E</div>
+      </div>
+      <h1 class="game-title">WORDLE BATTLE</h1>
+      <p class="game-subtitle">Live 1–8 player room battle! Fewest moves wins. Fastest time breaks ties.</p>
+
+      <div class="setup-group">
+        <label for="player-name-input">Your Nickname</label>
+        <input type="text" id="player-name-input" maxlength="12" placeholder="e.g. WordMaster" autocomplete="off" spellcheck="false">
+      </div>
+
+      <div class="setup-group">
+        <label>Choose Your Avatar</label>
+        <div id="avatar-picker" class="avatar-grid"></div>
+      </div>
+
+      <div class="action-tabs">
+        <button id="tab-create" class="tab-btn active">Create Room</button>
+        <button id="tab-join" class="tab-btn">Join Room</button>
+      </div>
+
+      <div id="panel-create" class="panel active">
+        <button id="btn-create-room" class="btn btn-primary btn-block">
+          <span class="btn-icon">⚡</span> Create Battle Room
+        </button>
+      </div>
+
+      <div id="panel-join" class="panel">
+        <div class="input-with-button">
+          <input type="text" id="join-code-input" placeholder="Enter 6-char Room Code" maxlength="6" autocomplete="off" spellcheck="false">
+          <button id="btn-join-room" class="btn btn-primary">Join</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VIEW 2: WAITING ROOM -->
+  <div id="view-waiting" class="view">
+    <div class="waiting-card">
+      <div class="room-code-badge">
+        <span class="badge-label">ROOM CODE</span>
+        <div class="code-copy-row">
+          <span id="waiting-room-code" class="room-code-display">------</span>
+          <button id="btn-copy-code" class="btn-copy" title="Copy Room Link">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+            <span>Copy Link</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="lobby-players-section">
+        <div class="section-title">
+          <span>Players in Room</span>
+          <span id="player-count-badge" class="count-pill">1 / 8</span>
+        </div>
+        <div id="lobby-player-list" class="lobby-players-grid"></div>
+      </div>
+
+      <div class="waiting-actions">
+        <button id="btn-start-game" class="btn btn-success btn-lg btn-block hidden">
+          🚀 START BATTLE
+        </button>
+        <div id="waiting-host-notice" class="host-notice">
+          <div class="spinner"></div>
+          <span>Waiting for room host to start the game...</span>
+        </div>
+        <button id="btn-leave-waiting" class="btn btn-outline btn-sm">Leave Room</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- VIEW 3: IN-GAME BATTLE (Matching the uploaded image) -->
+  <div id="view-game" class="view">
+    <!-- Top Game Bar -->
+    <header class="game-header">
+      <div class="header-left">
+        <div class="header-logo">WORDLE</div>
+        <div class="header-room-pill" id="btn-copy-game-room" title="Click to copy invite link">
+          <span class="room-dot"></span>
+          <span id="game-room-code">ROOM: ------</span>
+          <span class="copy-icon">📋</span>
+        </div>
+      </div>
+      
+      <div class="header-center">
+        <div class="timer-badge">
+          <span class="timer-icon">⏱️</span>
+          <span id="game-timer">00:00</span>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <div class="round-badge" id="game-round-badge">Round 1</div>
+        <button id="btn-leave-game" class="btn-icon-only" title="Leave Game">✕</button>
+      </div>
+    </header>
+
+    <!-- Main Game Container -->
+    <main class="game-container">
+      
+      <!-- Left Column: Opponents Sidebar (Matching the screenshot) -->
+      <aside class="opponents-sidebar">
+        <!-- Invite friends pill matching the screenshot -->
+        <button class="invite-friends-btn" id="btn-invite-sidebar" title="Share room code with friends">
+          <div class="invite-icon-circle">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+            </svg>
+          </div>
+          <div class="invite-text">
+            <span class="invite-title">INVITE</span>
+            <span class="invite-sub">FRIENDS</span>
+          </div>
+        </button>
+
+        <!-- Live Opponent Cards List -->
+        <div id="opponents-list" class="opponents-list">
+          <!-- Dynamically injected opponent cards with avatar + mini grid -->
+        </div>
+      </aside>
+
+      <!-- Center / Right Column: Main Wordle Board & Virtual Keyboard -->
+      <section class="wordle-center-column">
+        <!-- Notification Banner inside board -->
+        <div id="board-alert" class="board-alert hidden"></div>
+
+        <!-- 5x6 Board -->
+        <div id="wordle-board" class="wordle-board">
+          <!-- 6 rows x 5 tiles generated in app.js -->
+        </div>
+
+        <!-- Virtual Keyboard -->
+        <div id="virtual-keyboard" class="keyboard">
+          <!-- Row 1 -->
+          <div class="keyboard-row">
+            <button class="key" data-key="Q">Q</button>
+            <button class="key" data-key="W">W</button>
+            <button class="key" data-key="E">E</button>
+            <button class="key" data-key="R">R</button>
+            <button class="key" data-key="T">T</button>
+            <button class="key" data-key="Y">Y</button>
+            <button class="key" data-key="U">U</button>
+            <button class="key" data-key="I">I</button>
+            <button class="key" data-key="O">O</button>
+            <button class="key" data-key="P">P</button>
+          </div>
+          <!-- Row 2 -->
+          <div class="keyboard-row">
+            <button class="key" data-key="A">A</button>
+            <button class="key" data-key="S">S</button>
+            <button class="key" data-key="D">D</button>
+            <button class="key" data-key="F">F</button>
+            <button class="key" data-key="G">G</button>
+            <button class="key" data-key="H">H</button>
+            <button class="key" data-key="J">J</button>
+            <button class="key" data-key="K">K</button>
+            <button class="key" data-key="L">L</button>
+          </div>
+          <!-- Row 3 -->
+          <div class="keyboard-row">
+            <button class="key key-wide" data-key="ENTER">ENTER</button>
+            <button class="key" data-key="Z">Z</button>
+            <button class="key" data-key="X">X</button>
+            <button class="key" data-key="C">C</button>
+            <button class="key" data-key="V">V</button>
+            <button class="key" data-key="B">B</button>
+            <button class="key" data-key="N">N</button>
+            <button class="key" data-key="M">M</button>
+            <button class="key key-wide key-backspace" data-key="BACKSPACE">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path>
+                <line x1="18" y1="9" x2="12" y2="15"></line>
+                <line x1="12" y1="9" x2="18" y2="15"></line>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- VIEW 4: ROUND OVER / WINNERS PODIUM MODAL -->
+  <div id="modal-results" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="winner-trophy">🏆</div>
+        <h2 class="modal-title">ROUND COMPLETED!</h2>
+        <div class="secret-word-reveal">
+          <span class="reveal-label">Secret Word:</span>
+          <span id="reveal-word" class="reveal-word-text">-----</span>
+        </div>
+      </div>
+
+      <!-- Podium Top 3 -->
+      <div id="podium-section" class="podium-container"></div>
+
+      <!-- Complete Leaderboard List -->
+      <div class="leaderboard-table-wrapper">
+        <h3 class="leaderboard-heading">Final Standings</h3>
+        <p class="ranking-rule-note">Ranked by: 1) Least Moves &nbsp;•&nbsp; 2) Fastest Time</p>
+        <div id="leaderboard-list" class="leaderboard-list"></div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="modal-actions">
+        <button id="btn-next-round" class="btn btn-success btn-lg btn-block hidden">
+          🔄 NEXT ROUND
+        </button>
+        <div id="modal-guest-notice" class="guest-notice">
+          Waiting for host to start next round...
+        </div>
+        <button id="btn-share-results" class="btn btn-primary btn-block">
+          📋 Share Results
+        </button>
+        <button id="btn-modal-lobby" class="btn btn-outline btn-block">
+          Return to Lobby
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confetti Canvas for Winners -->
+  <canvas id="confetti-canvas"></canvas>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="avatars.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
