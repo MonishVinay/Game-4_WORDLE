@@ -1,8 +1,8 @@
-// Wordle Battle Client Application
+// Wordle Battle Client Application - 3 Game Modes
 document.addEventListener('DOMContentLoaded', () => {
   const socket = io();
 
-  // App State
+  // App & Room State
   let currentView = 'landing';
   let myPlayerId = null;
   let currentRoomCode = null;
@@ -12,13 +12,22 @@ document.addEventListener('DOMContentLoaded', () => {
   let roundStartTime = null;
   let timerInterval = null;
 
-  // Board State
-  const WORD_LENGTH = 5;
-  const MAX_GUESSES = 6;
+  // Game Mode & Settings State
+  let gameMode = 'mode1'; // 'mode1' | 'mode2' | 'mode3'
+  let timeLimitMinutes = 5;
+  let timeLimitSeconds = 0;
+  let numQuestions = 5;
+  let maxGuessesPerWord = 6;
+
+  // Player Match State
+  let currentWordIndex = 0;
+  let wordsSolved = 0;
+  let wordsFailed = 0;
+  let totalGuesses = 0;
   let currentRow = 0;
   let currentGuess = '';
   let isInputLocked = false;
-  let myGameStatus = 'playing'; // 'playing' | 'solved' | 'failed'
+  let myPlayerStatus = 'playing'; // 'playing' | 'solved' | 'failed' | 'finished'
   let keyStates = {}; // letter -> 'correct' | 'present' | 'absent'
   let playerGuessesHistory = []; // stores colors for sharing results
 
@@ -40,9 +49,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnJoinRoom = document.getElementById('btn-join-room');
   const joinCodeInput = document.getElementById('join-code-input');
 
-  // DOM Elements - Waiting Room
+  // DOM Elements - Waiting Room & Mode Select
   const waitingRoomCode = document.getElementById('waiting-room-code');
   const btnCopyCode = document.getElementById('btn-copy-code');
+  const modeRoleIndicator = document.getElementById('mode-role-indicator');
+  const modeCards = document.querySelectorAll('.mode-card');
+  const modeSettingsBox = document.getElementById('mode-settings-box');
+  const timeLimitGroup = document.getElementById('time-limit-group');
+  const questionsCountGroup = document.getElementById('questions-count-group');
+  const timeLimitPills = document.querySelectorAll('#time-limit-pills .pill-btn');
+  const questionsCountPills = document.querySelectorAll('#questions-count-pills .pill-btn');
+  const summaryBadgeText = document.getElementById('summary-badge-text');
   const playerCountBadge = document.getElementById('player-count-badge');
   const lobbyPlayerList = document.getElementById('lobby-player-list');
   const btnStartGame = document.getElementById('btn-start-game');
@@ -52,18 +69,28 @@ document.addEventListener('DOMContentLoaded', () => {
   // DOM Elements - Game
   const gameRoomCode = document.getElementById('game-room-code');
   const btnCopyGameRoom = document.getElementById('btn-copy-game-room');
+  const gameModeBadge = document.getElementById('game-mode-badge');
+  const gameTimerBadge = document.getElementById('game-timer-badge');
+  const gameTimerIcon = document.getElementById('game-timer-icon');
   const gameTimer = document.getElementById('game-timer');
-  const gameRoundBadge = document.getElementById('game-round-badge');
+  const gameScoreBadge = document.getElementById('game-score-badge');
+  const scoreSolvedCount = document.getElementById('score-solved-count');
+  const scoreWordIndicator = document.getElementById('score-word-indicator');
   const btnLeaveGame = document.getElementById('btn-leave-game');
   const btnInviteSidebar = document.getElementById('btn-invite-sidebar');
+  const liveLeaderboardWidget = document.getElementById('live-leaderboard-widget');
+  const liveLbItems = document.getElementById('live-lb-items');
   const opponentsList = document.getElementById('opponents-list');
   const wordleBoard = document.getElementById('wordle-board');
   const virtualKeyboard = document.getElementById('virtual-keyboard');
   const boardAlert = document.getElementById('board-alert');
 
   // DOM Elements - Modal Results
+  const resultsModalTitle = document.getElementById('results-modal-title');
+  const resultsSecretReveal = document.getElementById('results-secret-reveal');
   const revealWord = document.getElementById('reveal-word');
   const podiumSection = document.getElementById('podium-section');
+  const resultsRankingRuleNote = document.getElementById('results-ranking-rule-note');
   const leaderboardList = document.getElementById('leaderboard-list');
   const btnNextRound = document.getElementById('btn-next-round');
   const modalGuestNotice = document.getElementById('modal-guest-notice');
@@ -134,7 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Toast Helper
   let toastTimeout = null;
-  function showToast(message, duration = 2000) {
+  function showToast(message, duration = 2200) {
     if (toastTimeout) clearTimeout(toastTimeout);
     toastEl.textContent = message;
     toastEl.classList.remove('hidden');
@@ -160,6 +187,96 @@ document.addEventListener('DOMContentLoaded', () => {
   btnCopyCode.addEventListener('click', () => copyRoomLink(currentRoomCode));
   btnCopyGameRoom.addEventListener('click', () => copyRoomLink(currentRoomCode));
   btnInviteSidebar.addEventListener('click', () => copyRoomLink(currentRoomCode));
+
+  // -------------------------------------------------------------
+  // LOBBY & GAME MODE CONTROLS
+  // -------------------------------------------------------------
+  // Mode card clicks (Host only)
+  modeCards.forEach((card) => {
+    card.addEventListener('click', () => {
+      if (!isHost) return;
+      const selectedMode = card.dataset.mode;
+      gameMode = selectedMode;
+      updateModeUI();
+      emitRoomSettings();
+    });
+  });
+
+  // Time Limit pills
+  timeLimitPills.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      if (!isHost) return;
+      timeLimitMinutes = parseInt(btn.dataset.time, 10) || 5;
+      timeLimitPills.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      updateModeSummary();
+      emitRoomSettings();
+    });
+  });
+
+  // Questions count pills
+  questionsCountPills.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      if (!isHost) return;
+      numQuestions = parseInt(btn.dataset.count, 10) || 5;
+      questionsCountPills.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      updateModeSummary();
+      emitRoomSettings();
+    });
+  });
+
+  function emitRoomSettings() {
+    socket.emit('update_room_settings', {
+      roomCode: currentRoomCode,
+      gameMode,
+      timeLimitMinutes,
+      numQuestions
+    });
+  }
+
+  function updateModeUI() {
+    modeCards.forEach(c => {
+      c.classList.toggle('active', c.dataset.mode === gameMode);
+      if (!isHost) {
+        c.style.cursor = 'default';
+      } else {
+        c.style.cursor = 'pointer';
+      }
+    });
+
+    if (isHost) {
+      modeRoleIndicator.textContent = '👑 Host Controls';
+      if (gameMode === 'mode1') {
+        modeSettingsBox.classList.add('hidden');
+        timeLimitGroup.classList.add('hidden');
+        questionsCountGroup.classList.add('hidden');
+      } else if (gameMode === 'mode2') {
+        modeSettingsBox.classList.remove('hidden');
+        timeLimitGroup.classList.remove('hidden');
+        questionsCountGroup.classList.add('hidden');
+      } else if (gameMode === 'mode3') {
+        modeSettingsBox.classList.remove('hidden');
+        timeLimitGroup.classList.remove('hidden');
+        questionsCountGroup.classList.remove('hidden');
+      }
+    } else {
+      modeRoleIndicator.textContent = 'Host Selects';
+      modeSettingsBox.classList.add('hidden');
+    }
+
+    updateModeSummary();
+  }
+
+  function updateModeSummary() {
+    if (gameMode === 'mode1') {
+      summaryBadgeText.textContent = '🏆 Mode 1: Classic (1 Shared Word • 6 Guesses • Untimed)';
+    } else if (gameMode === 'mode2') {
+      summaryBadgeText.textContent = `⚡ Mode 2: Time Rush (Endless Words • ⏱️ ${timeLimitMinutes} Mins • 8 Guesses/Word)`;
+    } else if (gameMode === 'mode3') {
+      summaryBadgeText.textContent = `🎯 Mode 3: Sprint (${numQuestions} Questions • ⏱️ ${timeLimitMinutes} Mins • 5 Guesses/Word)`;
+    }
+  }
 
   // -------------------------------------------------------------
   // LOBBY & ROOM CREATION / JOIN
@@ -197,8 +314,12 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   btnModalLobby.addEventListener('click', () => {
-    modalResults.classList.add('hidden');
-    switchView('waiting');
+    if (isHost) {
+      socket.emit('return_to_lobby', { roomCode: currentRoomCode });
+    } else {
+      modalResults.classList.add('hidden');
+      switchView('waiting');
+    }
   });
 
   btnStartGame.addEventListener('click', () => {
@@ -234,6 +355,14 @@ document.addEventListener('DOMContentLoaded', () => {
     handleRoomUpdate(room);
   });
 
+  socket.on('room_returned_to_lobby', (room) => {
+    handleRoomUpdate(room);
+    modalResults.classList.add('hidden');
+    stopTimer();
+    switchView('waiting');
+    showToast('Returned to room lobby');
+  });
+
   socket.on('player_left', ({ playerId, room }) => {
     showToast('A player left the room');
     handleRoomUpdate(room);
@@ -247,7 +376,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupGameBoard();
     switchView('game');
     startTimer();
-    showToast(`Round ${roundNumber} Started! Guess the word!`, 2500);
+    showToast(`${getModeTitle(gameMode)} Started! Good luck!`, 2500);
   });
 
   socket.on('guess_error', ({ message }) => {
@@ -256,20 +385,63 @@ document.addEventListener('DOMContentLoaded', () => {
     shakeCurrentRow();
   });
 
-  socket.on('guess_result', ({ guess, colors, rowIndex, solved, failed, finishTimeMs }) => {
+  socket.on('guess_result', ({
+    guess,
+    colors,
+    rowIndex,
+    wordSolved,
+    wordFailed,
+    wordFinished,
+    targetWordRevealed,
+    currentWordIndex: wordIdx,
+    wordsSolved: sCount,
+    wordsFailed: fCount,
+    totalGuesses: gCount,
+    playerStatus,
+    advanceNextWord,
+    finishTimeMs
+  }) => {
     playerGuessesHistory.push(colors);
+
     revealRowResult(rowIndex, guess, colors, () => {
       isInputLocked = false;
-      if (solved) {
-        myGameStatus = 'solved';
-        isInputLocked = true;
-        bounceRow(rowIndex);
-        const timeSec = (finishTimeMs / 1000).toFixed(1);
-        showToast(`🎉 SOLVED in ${rowIndex + 1} guesses! (${timeSec}s)`, 3500);
-      } else if (failed) {
-        myGameStatus = 'failed';
-        isInputLocked = true;
-        showToast(`Out of guesses! Waiting for other players...`, 3000);
+      wordsSolved = sCount;
+      wordsFailed = fCount;
+      totalGuesses = gCount;
+      myPlayerStatus = playerStatus;
+
+      updateScoreBadge();
+
+      if (wordFinished) {
+        if (wordSolved) {
+          bounceRow(rowIndex);
+          if (gameMode === 'mode1') {
+            const timeSec = (finishTimeMs / 1000).toFixed(1);
+            showToast(`🎉 SOLVED in ${rowIndex + 1} guesses! (${timeSec}s)`, 3500);
+            isInputLocked = true;
+          } else {
+            showToast(`🎉 Word #${wordIdx + 1} Solved!`, 1500);
+          }
+        } else if (wordFailed) {
+          if (gameMode === 'mode1') {
+            showToast(`Out of guesses! The word was ${targetWordRevealed}.`, 3500);
+            isInputLocked = true;
+          } else {
+            showToast(`Word was "${targetWordRevealed}". Next word...`, 2000);
+          }
+        }
+
+        if (advanceNextWord) {
+          isInputLocked = true;
+          setTimeout(() => {
+            currentWordIndex++;
+            resetBoardForNextWord();
+            isInputLocked = false;
+          }, 800);
+        } else if (gameMode === 'mode3' && playerStatus === 'finished') {
+          isInputLocked = true;
+          showToast(`🏁 Finished all questions! Waiting for other players...`, 4000);
+        }
       } else {
         currentRow++;
         currentGuess = '';
@@ -277,15 +449,31 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  socket.on('opponent_progress', ({ playerId, rowIndex, colors, status, finishTimeMs, numGuesses }) => {
-    updateOpponentCard(playerId, rowIndex, colors, status, finishTimeMs, numGuesses);
+  socket.on('opponent_progress', ({
+    playerId,
+    rowIndex,
+    colors,
+    currentWordIndex: oppWordIdx,
+    wordsSolved: oppSolved,
+    wordsFailed: oppFailed,
+    totalGuesses: oppTotalGuesses,
+    wordSolved,
+    wordFailed,
+    wordFinished,
+    status
+  }) => {
+    updateOpponentCard(playerId, rowIndex, colors, oppWordIdx, oppSolved, oppFailed, oppTotalGuesses, wordFinished, status);
   });
 
-  socket.on('game_over', ({ targetWord, leaderboard, roundNumber }) => {
+  socket.on('live_leaderboard_update', ({ leaderboard, gameMode: mode }) => {
+    renderLiveLeaderboard(leaderboard, mode);
+  });
+
+  socket.on('game_over', ({ gameMode: mode, targetWord, leaderboard, roundNumber }) => {
     stopTimer();
     setTimeout(() => {
-      showGameOverModal(targetWord, leaderboard, roundNumber);
-    }, 1200);
+      showGameOverModal(mode, targetWord, leaderboard, roundNumber);
+    }, 1000);
   });
 
   // -------------------------------------------------------------
@@ -294,12 +482,19 @@ document.addEventListener('DOMContentLoaded', () => {
   function handleRoomUpdate(room) {
     currentRoomCode = room.code;
     isHost = room.hostId === socket.id;
+    gameMode = room.gameMode || 'mode1';
+    timeLimitMinutes = room.timeLimitMinutes || 5;
+    timeLimitSeconds = room.timeLimitSeconds || (gameMode !== 'mode1' ? timeLimitMinutes * 60 : 0);
+    numQuestions = room.numQuestions || 5;
+    maxGuessesPerWord = room.maxGuessesPerWord || (gameMode === 'mode2' ? 8 : (gameMode === 'mode3' ? 5 : 6));
 
     // Update Waiting View
     waitingRoomCode.textContent = room.code;
     gameRoomCode.textContent = `ROOM: ${room.code}`;
     playerCountBadge.textContent = `${room.players.length} / ${room.maxPlayers}`;
-    gameRoundBadge.textContent = `Round ${room.roundNumber || 1}`;
+
+    // Update Mode Select UI
+    updateModeUI();
 
     // Host controls
     if (isHost) {
@@ -333,28 +528,35 @@ document.addEventListener('DOMContentLoaded', () => {
     renderOpponentsSidebar(room.players);
   }
 
+  function getModeTitle(mode) {
+    if (mode === 'mode1') return 'Classic';
+    if (mode === 'mode2') return `Time Rush (${timeLimitMinutes}m)`;
+    if (mode === 'mode3') return `Sprint (${numQuestions} Words)`;
+    return 'Classic';
+  }
+
   function renderOpponentsSidebar(players) {
     opponentsList.innerHTML = '';
     const otherPlayers = players.filter(p => p.id !== socket.id);
+
+    // Show/hide live leaderboard widget in sidebar for Mode 2 & 3
+    if (gameMode === 'mode2' || gameMode === 'mode3') {
+      liveLeaderboardWidget.classList.remove('hidden');
+    } else {
+      liveLeaderboardWidget.classList.add('hidden');
+    }
 
     otherPlayers.forEach((p) => {
       const card = document.createElement('div');
       card.className = 'opponent-card';
       card.id = `opponent-card-${p.id}`;
+      card.dataset.currentWordIdx = p.currentWordIndex || 0;
 
-      let statusText = 'Thinking...';
-      if (p.status === 'solved') {
-        const timeSec = p.finishTimeMs ? `${(p.finishTimeMs / 1000).toFixed(1)}s` : '';
-        statusText = `🎉 Solved (${p.numGuesses}/6, ${timeSec})`;
-      } else if (p.status === 'failed') {
-        statusText = 'Failed (6/6)';
-      } else if (p.numGuesses > 0) {
-        statusText = `Guess ${p.numGuesses}/6`;
-      }
+      const statusText = formatOpponentStatus(p.status, p.currentWordIndex || 0, p.wordsSolved || 0, p.numGuesses || 0);
 
-      // Build 5x6 mini grid HTML
+      // Build mini grid HTML with maxGuessesPerWord rows
       let miniGridHtml = '<div class="mini-grid">';
-      for (let r = 0; r < 6; r++) {
+      for (let r = 0; r < maxGuessesPerWord; r++) {
         const rowColors = (p.miniGrid && p.miniGrid[r]) ? p.miniGrid[r] : null;
         for (let c = 0; c < 5; c++) {
           const colorClass = rowColors ? rowColors[c] : '';
@@ -380,9 +582,38 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  function updateOpponentCard(playerId, rowIndex, colors, status, finishTimeMs, numGuesses) {
+  function formatOpponentStatus(status, wordIdx, solvedCount, currentWordGuesses) {
+    if (gameMode === 'mode1') {
+      if (status === 'solved') return '🎉 Solved!';
+      if (status === 'failed') return 'Failed (6/6)';
+      return currentWordGuesses > 0 ? `Guess ${currentWordGuesses}/6` : 'Thinking...';
+    }
+
+    if (gameMode === 'mode2') {
+      return `Word #${wordIdx + 1} • ${solvedCount} Solved`;
+    }
+
+    if (gameMode === 'mode3') {
+      if (status === 'finished') return `🏁 Finished (${solvedCount}/${numQuestions})`;
+      return `Word ${wordIdx + 1}/${numQuestions} • ${solvedCount} Solved`;
+    }
+
+    return 'Playing';
+  }
+
+  function updateOpponentCard(playerId, rowIndex, colors, wordIdx, oppSolved, oppFailed, oppTotalGuesses, wordFinished, status) {
     const card = document.getElementById(`opponent-card-${playerId}`);
     if (!card) return;
+
+    // Check if opponent moved to a new wordle
+    const prevWordIdx = parseInt(card.dataset.currentWordIdx, 10) || 0;
+    if (wordIdx !== prevWordIdx) {
+      card.dataset.currentWordIdx = wordIdx;
+      // Clear mini-grid for the new word
+      card.querySelectorAll('.mini-cell').forEach(cell => {
+        cell.className = 'mini-cell';
+      });
+    }
 
     // Update mini-grid cells for rowIndex
     colors.forEach((color, colIndex) => {
@@ -395,17 +626,39 @@ document.addEventListener('DOMContentLoaded', () => {
     // Update status text
     const statusEl = card.querySelector('.opponent-status');
     if (statusEl) {
-      if (status === 'solved') {
-        const timeSec = finishTimeMs ? `${(finishTimeMs / 1000).toFixed(1)}s` : '';
-        statusEl.textContent = `🎉 Solved (${numGuesses}/6, ${timeSec})`;
+      statusEl.textContent = formatOpponentStatus(status, wordIdx, oppSolved, rowIndex + 1);
+      if (status === 'solved' || wordFinished) {
         statusEl.classList.add('solved');
-      } else if (status === 'failed') {
-        statusEl.textContent = 'Failed (6/6)';
-        statusEl.classList.remove('solved');
-      } else {
-        statusEl.textContent = `Guess ${numGuesses}/6`;
       }
     }
+  }
+
+  function renderLiveLeaderboard(leaderboard, mode) {
+    if (!liveLbItems) return;
+    liveLbItems.innerHTML = '';
+
+    leaderboard.slice(0, 5).forEach((p) => {
+      const row = document.createElement('div');
+      row.className = `live-lb-row ${p.id === socket.id ? 'is-you' : ''}`;
+      
+      let rightText = '';
+      if (mode === 'mode2') {
+        rightText = `${p.wordsSolved} ⭐ (${p.totalGuesses}g)`;
+      } else if (mode === 'mode3') {
+        rightText = `${p.wordsSolved}/${p.totalQuestions} ⭐ (${p.totalGuesses}g)`;
+      } else {
+        rightText = p.solved ? `${p.numGuesses}g` : '...';
+      }
+
+      row.innerHTML = `
+        <div class="live-lb-left">
+          <span class="live-lb-rank">${p.rank}.</span>
+          <span class="live-lb-name">${escapeHtml(p.name)}</span>
+        </div>
+        <div class="live-lb-right">${rightText}</div>
+      `;
+      liveLbItems.appendChild(row);
+    });
   }
 
   // -------------------------------------------------------------
@@ -414,19 +667,28 @@ document.addEventListener('DOMContentLoaded', () => {
   function setupGameBoard() {
     currentRow = 0;
     currentGuess = '';
+    currentWordIndex = 0;
+    wordsSolved = 0;
+    wordsFailed = 0;
+    totalGuesses = 0;
     isInputLocked = false;
-    myGameStatus = 'playing';
+    myPlayerStatus = 'playing';
     keyStates = {};
     playerGuessesHistory = [];
     boardAlert.classList.add('hidden');
 
-    // Build 5x6 Board
+    // Update Header badges
+    gameModeBadge.textContent = getModeTitle(gameMode);
+    updateScoreBadge();
+
+    // Build dynamic board (5x6, 5x8, or 5x5)
+    wordleBoard.className = `wordle-board rows-${maxGuessesPerWord}`;
     wordleBoard.innerHTML = '';
-    for (let r = 0; r < MAX_GUESSES; r++) {
+    for (let r = 0; r < maxGuessesPerWord; r++) {
       const rowEl = document.createElement('div');
       rowEl.className = 'board-row';
       rowEl.dataset.row = r;
-      for (let c = 0; c < WORD_LENGTH; c++) {
+      for (let c = 0; c < 5; c++) {
         const tileEl = document.createElement('div');
         tileEl.className = 'board-tile';
         tileEl.dataset.row = r;
@@ -436,14 +698,45 @@ document.addEventListener('DOMContentLoaded', () => {
       wordleBoard.appendChild(rowEl);
     }
 
-    // Reset virtual keyboard keys
+    // Reset keyboard keys
+    resetKeyboardColors();
+  }
+
+  function resetBoardForNextWord() {
+    currentRow = 0;
+    currentGuess = '';
+    // Clear all tiles
+    wordleBoard.querySelectorAll('.board-tile').forEach(tile => {
+      tile.textContent = '';
+      tile.className = 'board-tile';
+    });
+    resetKeyboardColors();
+    updateScoreBadge();
+  }
+
+  function resetKeyboardColors() {
+    keyStates = {};
     document.querySelectorAll('.key').forEach((keyEl) => {
       keyEl.classList.remove('correct', 'present', 'absent');
     });
   }
 
+  function updateScoreBadge() {
+    if (gameMode === 'mode1') {
+      gameScoreBadge.classList.add('hidden');
+    } else if (gameMode === 'mode2') {
+      gameScoreBadge.classList.remove('hidden');
+      scoreSolvedCount.textContent = `⭐ ${wordsSolved} Solved`;
+      scoreWordIndicator.textContent = `Word #${currentWordIndex + 1}`;
+    } else if (gameMode === 'mode3') {
+      gameScoreBadge.classList.remove('hidden');
+      scoreSolvedCount.textContent = `⭐ ${wordsSolved}/${numQuestions} Solved`;
+      scoreWordIndicator.textContent = `Word ${Math.min(currentWordIndex + 1, numQuestions)} of ${numQuestions}`;
+    }
+  }
+
   function handleKeyPress(key) {
-    if (currentView !== 'game' || isInputLocked || myGameStatus !== 'playing') return;
+    if (currentView !== 'game' || isInputLocked || myPlayerStatus !== 'playing') return;
 
     const upperKey = key.toUpperCase();
 
@@ -457,7 +750,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function addLetter(letter) {
-    if (currentGuess.length >= WORD_LENGTH) return;
+    if (currentGuess.length >= 5) return;
     currentGuess += letter;
     const tile = getTile(currentRow, currentGuess.length - 1);
     if (tile) {
@@ -478,7 +771,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function submitGuess() {
-    if (currentGuess.length < WORD_LENGTH) {
+    if (currentGuess.length < 5) {
       showBoardAlert('Not enough letters');
       shakeCurrentRow();
       return;
@@ -504,12 +797,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function bounceRow(row) {
-    for (let c = 0; c < WORD_LENGTH; c++) {
+    for (let c = 0; c < 5; c++) {
       const tile = getTile(row, c);
       if (tile) {
         setTimeout(() => {
           tile.classList.add('bounce');
-        }, c * 100);
+        }, c * 80);
       }
     }
   }
@@ -523,7 +816,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function revealRowResult(rowIndex, guess, colors, callback) {
-    const delayStep = 250;
+    const delayStep = 220;
 
     colors.forEach((color, colIndex) => {
       setTimeout(() => {
@@ -532,13 +825,12 @@ document.addEventListener('DOMContentLoaded', () => {
           tile.classList.add('flip');
           setTimeout(() => {
             tile.classList.add(color);
-            // Update keyboard key
             updateKeyColor(guess[colIndex].toUpperCase(), color);
-          }, 220);
+          }, 200);
         }
 
         if (colIndex === colors.length - 1) {
-          setTimeout(callback, 350);
+          setTimeout(callback, 320);
         }
       }, colIndex * delayStep);
     });
@@ -575,7 +867,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // -------------------------------------------------------------
-  // TIMER
+  // TIMER (Count up for Mode 1, Countdown for Mode 2 & 3)
   // -------------------------------------------------------------
   function startTimer() {
     stopTimer();
@@ -586,82 +878,140 @@ document.addEventListener('DOMContentLoaded', () => {
   function stopTimer() {
     if (timerInterval) clearInterval(timerInterval);
     timerInterval = null;
+    gameTimerBadge.classList.remove('warning');
   }
 
   function updateTimerDisplay() {
     if (!roundStartTime) return;
     const elapsedSec = Math.floor((Date.now() - roundStartTime) / 1000);
-    const mins = String(Math.floor(elapsedSec / 60)).padStart(2, '0');
-    const secs = String(elapsedSec % 60).padStart(2, '0');
-    gameTimer.textContent = `${mins}:${secs}`;
+
+    if (gameMode === 'mode1') {
+      gameTimerIcon.textContent = '⏱️';
+      gameTimerBadge.classList.remove('warning');
+      const mins = String(Math.floor(elapsedSec / 60)).padStart(2, '0');
+      const secs = String(elapsedSec % 60).padStart(2, '0');
+      gameTimer.textContent = `${mins}:${secs}`;
+    } else {
+      // Countdown timer for Mode 2 and Mode 3
+      gameTimerIcon.textContent = '⏳';
+      const remainingSec = Math.max(0, timeLimitSeconds - elapsedSec);
+      const mins = String(Math.floor(remainingSec / 60)).padStart(2, '0');
+      const secs = String(remainingSec % 60).padStart(2, '0');
+      gameTimer.textContent = `${mins}:${secs}`;
+
+      if (remainingSec <= 30) {
+        gameTimerBadge.classList.add('warning');
+      } else {
+        gameTimerBadge.classList.remove('warning');
+      }
+
+      if (remainingSec <= 0) {
+        stopTimer();
+      }
+    }
   }
 
   // -------------------------------------------------------------
   // GAME OVER & LEADERBOARD MODAL
   // -------------------------------------------------------------
-  function showGameOverModal(targetWord, leaderboard, roundNum) {
-    revealWord.textContent = targetWord;
+  function showGameOverModal(mode, targetWord, leaderboard, roundNum) {
     modalResults.classList.remove('hidden');
 
-    // Trigger confetti if you won or came in top 3
+    if (mode === 'mode1') {
+      resultsModalTitle.textContent = 'ROUND COMPLETED!';
+      resultsSecretReveal.classList.remove('hidden');
+      revealWord.textContent = targetWord || '-----';
+      resultsRankingRuleNote.textContent = 'Ranked by: 1) Solved • 2) Least Moves • 3) Fastest Time';
+    } else if (mode === 'mode2') {
+      resultsModalTitle.textContent = "TIME'S UP! FINAL STANDINGS";
+      resultsSecretReveal.classList.add('hidden');
+      resultsRankingRuleNote.textContent = 'Ranked by: 1) Most Solved • 2) Fewer Total Guesses • 3) Fewer Misses';
+    } else if (mode === 'mode3') {
+      resultsModalTitle.textContent = 'SPRINT GAUNTLET COMPLETED!';
+      resultsSecretReveal.classList.add('hidden');
+      resultsRankingRuleNote.textContent = 'Ranked by: 1) Most Solved • 2) Fewer Total Guesses • 3) Completion Time';
+    }
+
+    // Trigger confetti if top 3
     const myRank = leaderboard.find(p => p.id === socket.id);
-    if (myRank && (myRank.rank <= 3 || myRank.solved)) {
+    if (myRank && (myRank.rank <= 3 || myRank.wordsSolved > 0 || myRank.solved)) {
       launchConfetti();
     }
 
-    // Render Podium (Top 3)
-    renderPodium(leaderboard);
+    // Render Podium
+    renderPodium(leaderboard, mode);
 
-    // Render full standings
-    renderLeaderboardList(leaderboard);
+    // Render Standings List
+    renderLeaderboardList(leaderboard, mode);
   }
 
-  function renderPodium(leaderboard) {
+  function renderPodium(leaderboard, mode) {
     podiumSection.innerHTML = '';
     const top3 = leaderboard.slice(0, 3);
     if (top3.length === 0) return;
 
     // Visual order: 2nd (left), 1st (center), 3rd (right)
     const order = [];
-    if (top3[1]) order.push({ ...top3[1], spotClass: 'second', place: '🥈 2nd' });
-    if (top3[0]) order.push({ ...top3[0], spotClass: 'first', place: '👑 1st' });
-    if (top3[2]) order.push({ ...top3[2], spotClass: 'third', place: '🥉 3rd' });
+    if (top3[1]) order.push({ ...top3[1], spotClass: 'second' });
+    if (top3[0]) order.push({ ...top3[0], spotClass: 'first' });
+    if (top3[2]) order.push({ ...top3[2], spotClass: 'third' });
 
     order.forEach((p) => {
       const spot = document.createElement('div');
       spot.className = `podium-spot ${p.spotClass}`;
-      const timeStr = p.timeTakenSeconds ? `${p.timeTakenSeconds}s` : '--';
-      const scoreStr = p.solved ? `${p.numGuesses}/6` : 'X/6';
+      
+      let statStr = '';
+      if (mode === 'mode1') {
+        const timeStr = p.timeTakenSeconds ? `${p.timeTakenSeconds}s` : '--';
+        statStr = p.solved ? `${p.numGuesses}/6 • ${timeStr}` : 'X/6';
+      } else if (mode === 'mode2') {
+        statStr = `${p.wordsSolved} ⭐ • ${p.totalGuesses}g`;
+      } else if (mode === 'mode3') {
+        const timeStr = p.timeTakenSeconds ? `${p.timeTakenSeconds}s` : '';
+        statStr = `${p.wordsSolved}/${p.totalQuestions} ⭐ ${timeStr}`;
+      }
 
       spot.innerHTML = `
         <div class="podium-avatar">${getAvatarSvg(p.avatarId)}</div>
         <div class="podium-name">${escapeHtml(p.name)}</div>
-        <div class="podium-stats">${scoreStr} • ${timeStr}</div>
+        <div class="podium-stats">${statStr}</div>
         <div class="podium-pillar">${p.rank}</div>
       `;
       podiumSection.appendChild(spot);
     });
   }
 
-  function renderLeaderboardList(leaderboard) {
+  function renderLeaderboardList(leaderboard, mode) {
     leaderboardList.innerHTML = '';
 
     leaderboard.forEach((p) => {
       const row = document.createElement('div');
       row.className = 'leaderboard-row';
       const medal = p.rank === 1 ? '🥇' : p.rank === 2 ? '🥈' : p.rank === 3 ? '🥉' : `${p.rank}.`;
-      const timeStr = p.timeTakenSeconds ? `⏱️ ${p.timeTakenSeconds}s` : 'DNF';
-      const guessesStr = p.solved ? `${p.numGuesses}/6 Guesses` : 'Did not solve';
+
+      let mainScoreText = '';
+      let subScoreText = '';
+
+      if (mode === 'mode1') {
+        mainScoreText = p.solved ? `${p.numGuesses}/6 Guesses` : 'Did not solve';
+        subScoreText = p.timeTakenSeconds ? `⏱️ ${p.timeTakenSeconds}s` : '';
+      } else if (mode === 'mode2') {
+        mainScoreText = `${p.wordsSolved} Words Solved`;
+        subScoreText = `${p.totalGuesses} Guesses • ${p.wordsFailed} Missed`;
+      } else if (mode === 'mode3') {
+        mainScoreText = `${p.wordsSolved}/${p.totalQuestions} Questions Solved`;
+        subScoreText = `${p.totalGuesses} Guesses • ${p.timeTakenSeconds ? p.timeTakenSeconds + 's' : 'DNF'}`;
+      }
 
       row.innerHTML = `
         <div class="leaderboard-rank">${medal}</div>
         <div class="leaderboard-avatar">${getAvatarSvg(p.avatarId)}</div>
         <div class="leaderboard-info">
           <div class="leaderboard-name">${escapeHtml(p.name)} ${p.id === socket.id ? '(You)' : ''}</div>
-          <div class="score-time">${timeStr}</div>
+          <div class="score-time">${subScoreText}</div>
         </div>
         <div class="leaderboard-score">
-          <span class="score-guesses ${p.solved ? 'won' : 'lost'}">${guessesStr}</span>
+          <span class="score-guesses ${p.solved || p.wordsSolved > 0 ? 'won' : 'lost'}">${mainScoreText}</span>
         </div>
       `;
       leaderboardList.appendChild(row);
@@ -670,23 +1020,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Share Results
   btnShareResults.addEventListener('click', () => {
-    const roundTitle = `Wordle Battle (Room: ${currentRoomCode}) - Round ${currentRound}`;
-    const scoreSummary = myGameStatus === 'solved' ? `${playerGuessesHistory.length}/6` : 'X/6';
-    let text = `${roundTitle}\nScore: ${scoreSummary}\n\n`;
+    const roundTitle = `Wordle Battle (Room: ${currentRoomCode}) - ${getModeTitle(gameMode)}`;
+    let summaryText = '';
 
-    playerGuessesHistory.forEach((rowColors) => {
-      rowColors.forEach((color) => {
-        if (color === 'correct') text += '🟩';
-        else if (color === 'present') text += '🟨';
-        else text += '⬜';
+    if (gameMode === 'mode1') {
+      const scoreSummary = myPlayerStatus === 'solved' ? `${playerGuessesHistory.length}/6` : 'X/6';
+      summaryText = `Score: ${scoreSummary}\n\n`;
+      playerGuessesHistory.forEach((rowColors) => {
+        rowColors.forEach((color) => {
+          if (color === 'correct') summaryText += '🟩';
+          else if (color === 'present') summaryText += '🟨';
+          else summaryText += '⬜';
+        });
+        summaryText += '\n';
       });
-      text += '\n';
-    });
+    } else {
+      summaryText = `Solved: ${wordsSolved} Words | Guesses: ${totalGuesses}\n`;
+    }
 
-    text += `\nPlay at: ${window.location.origin}`;
+    const fullText = `${roundTitle}\n${summaryText}\nPlay live at: ${window.location.origin}`;
 
     if (navigator.clipboard) {
-      navigator.clipboard.writeText(text).then(() => {
+      navigator.clipboard.writeText(fullText).then(() => {
         showToast('📋 Game results copied to clipboard!');
       });
     } else {

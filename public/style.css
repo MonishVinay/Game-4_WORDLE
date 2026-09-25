@@ -85,7 +85,7 @@ body {
   border-radius: 20px;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
   width: 100%;
-  max-width: 460px;
+  max-width: 480px;
   padding: 32px 28px;
   text-align: center;
 }
@@ -319,7 +319,7 @@ body {
 }
 
 /* =========================================================
-   2. WAITING ROOM VIEW
+   2. WAITING ROOM VIEW & GAME MODES
 ========================================================= */
 #view-waiting {
   align-items: center;
@@ -334,8 +334,8 @@ body {
   border-radius: 20px;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
   width: 100%;
-  max-width: 500px;
-  padding: 32px 28px;
+  max-width: 580px;
+  padding: 28px 24px;
   text-align: center;
 }
 
@@ -343,8 +343,8 @@ body {
   background: #f8fafc;
   border: 2px dashed #cbd5e1;
   border-radius: 14px;
-  padding: 16px;
-  margin-bottom: 24px;
+  padding: 14px;
+  margin-bottom: 20px;
 }
 
 .badge-label {
@@ -353,7 +353,7 @@ body {
   font-weight: 700;
   color: #64748b;
   letter-spacing: 1px;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .code-copy-row {
@@ -365,7 +365,7 @@ body {
 
 .room-code-display {
   font-family: var(--font-heading);
-  font-size: 2.2rem;
+  font-size: 2.1rem;
   font-weight: 700;
   color: #0f172a;
   letter-spacing: 4px;
@@ -390,9 +390,150 @@ body {
   background: #cbd5e1;
 }
 
+/* Mode Selection Section */
+.mode-select-section {
+  text-align: left;
+  margin-bottom: 22px;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.mode-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.mode-card {
+  border: 2px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 10px 8px;
+  background: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.mode-card:hover {
+  border-color: #93c5fd;
+  transform: translateY(-2px);
+}
+
+.mode-card.active {
+  border-color: var(--color-primary);
+  background: #eff6ff;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.mode-card-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.mode-icon {
+  font-size: 1.1rem;
+}
+
+.mode-title {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.mode-desc {
+  font-size: 0.72rem;
+  color: #64748b;
+  line-height: 1.3;
+}
+
+/* Mode Settings Box */
+.mode-settings-box {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mode-settings-box.hidden {
+  display: none;
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.setting-row.hidden {
+  display: none;
+}
+
+.setting-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.pill-options {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.pill-btn {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.pill-btn:hover {
+  background: #e2e8f0;
+}
+
+.pill-btn.active {
+  background: var(--color-primary);
+  color: #ffffff;
+  border-color: var(--color-primary);
+}
+
+.guest-mode-summary {
+  text-align: center;
+  margin-top: 4px;
+}
+
+.summary-badge {
+  background: #e0f2fe;
+  color: #0369a1;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 12px;
+  display: inline-block;
+}
+
+/* Lobby Players Section */
 .lobby-players-section {
   text-align: left;
-  margin-bottom: 28px;
+  margin-bottom: 24px;
 }
 
 .section-title {
@@ -401,30 +542,30 @@ body {
   align-items: center;
   font-weight: 700;
   color: #334155;
-  font-size: 1rem;
-  margin-bottom: 14px;
+  font-size: 0.95rem;
+  margin-bottom: 12px;
 }
 
 .count-pill {
   background: #e0e7ff;
   color: #4338ca;
-  padding: 4px 10px;
+  padding: 3px 9px;
   border-radius: 20px;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 700;
 }
 
 .lobby-players-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  gap: 10px;
 }
 
 .lobby-player-card {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 12px;
+  padding: 8px 10px;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   background: #f8fafc;
@@ -436,8 +577,8 @@ body {
 }
 
 .lobby-player-avatar {
-  width: 38px;
-  height: 38px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   overflow: hidden;
   flex-shrink: 0;
@@ -449,7 +590,7 @@ body {
 
 .lobby-player-name {
   font-weight: 700;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   color: #1e293b;
   white-space: nowrap;
   overflow: hidden;
@@ -457,11 +598,11 @@ body {
 }
 
 .lobby-host-tag {
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   font-weight: 700;
   color: #d97706;
   background: #fef3c7;
-  padding: 1px 6px;
+  padding: 1px 5px;
   border-radius: 4px;
   display: inline-block;
 }
@@ -469,7 +610,7 @@ body {
 .waiting-actions {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .host-notice {
@@ -479,13 +620,13 @@ body {
   gap: 10px;
   color: #64748b;
   font-weight: 600;
-  font-size: 0.95rem;
-  padding: 12px;
+  font-size: 0.9rem;
+  padding: 10px;
 }
 
 .spinner {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   border: 3px solid #e2e8f0;
   border-top-color: var(--color-primary);
   border-radius: 50%;
@@ -497,7 +638,7 @@ body {
 }
 
 /* =========================================================
-   3. IN-GAME BATTLE VIEW (Pixel-matched to uploaded image)
+   3. IN-GAME BATTLE VIEW
 ========================================================= */
 #view-game {
   background-color: #ffffff;
@@ -520,7 +661,7 @@ body {
 .header-left, .header-center, .header-right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .header-logo {
@@ -536,10 +677,10 @@ body {
   align-items: center;
   gap: 6px;
   background: #f3f4f6;
-  padding: 6px 12px;
+  padding: 5px 10px;
   border-radius: 20px;
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   color: #374151;
   cursor: pointer;
   transition: background 0.15s;
@@ -556,26 +697,60 @@ body {
   border-radius: 50%;
 }
 
+.header-mode-badge {
+  background: #e0f2fe;
+  color: #0369a1;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-weight: 800;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+}
+
 .timer-badge {
   display: flex;
   align-items: center;
   gap: 6px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  padding: 4px 14px;
+  padding: 4px 12px;
   border-radius: 16px;
-  font-weight: 700;
-  font-size: 1rem;
+  font-weight: 800;
+  font-size: 0.95rem;
   color: #0f172a;
 }
 
-.round-badge {
-  background: #e0f2fe;
-  color: #0369a1;
+.timer-badge.warning {
+  background: #fef2f2;
+  border-color: #f87171;
+  color: #dc2626;
+  animation: pulseTimer 1s infinite alternate;
+}
+
+@keyframes pulseTimer {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.06); }
+}
+
+.game-score-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #047857;
   padding: 4px 10px;
-  border-radius: 6px;
-  font-weight: 700;
+  border-radius: 12px;
+  font-weight: 800;
   font-size: 0.8rem;
+}
+
+.game-score-badge.hidden {
+  display: none;
+}
+
+.score-divider {
+  color: #6ee7b7;
 }
 
 .btn-icon-only {
@@ -597,24 +772,24 @@ body {
 /* GAME CONTAINER: LEFT SIDEBAR + CENTER BOARD */
 .game-container {
   display: flex;
-  max-width: 1050px;
+  max-width: 1080px;
   margin: 0 auto;
-  padding: 20px 16px 30px;
+  padding: 16px 14px 26px;
   width: 100%;
   flex: 1;
 }
 
 /* Opponents Sidebar (Left) */
 .opponents-sidebar {
-  width: 175px;
+  width: 195px;
   flex-shrink: 0;
-  padding-right: 20px;
+  padding-right: 18px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
-/* Invite Friends Pill matching the screenshot */
+/* Invite Friends Pill */
 .invite-friends-btn {
   display: flex;
   align-items: center;
@@ -622,7 +797,7 @@ body {
   background: #eef2f6;
   border: 1.5px solid #d1d5db;
   border-radius: 12px;
-  padding: 8px 12px;
+  padding: 8px 10px;
   cursor: pointer;
   transition: all 0.15s ease;
   width: 100%;
@@ -635,8 +810,8 @@ body {
 }
 
 .invite-icon-circle {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   background-color: #48bb78;
   border-radius: 50%;
   display: flex;
@@ -653,47 +828,136 @@ body {
 
 .invite-title {
   font-weight: 800;
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   color: #1f2937;
-  letter-spacing: 0.5px;
   line-height: 1.1;
 }
 
 .invite-sub {
   font-weight: 800;
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   color: #1f2937;
-  letter-spacing: 0.5px;
   line-height: 1.1;
+}
+
+/* Live Leaderboard Widget */
+.live-leaderboard-widget {
+  background: #f8fafc;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.live-leaderboard-widget.hidden {
+  display: none;
+}
+
+.live-lb-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #334155;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 4px;
+}
+
+.live-lb-badge {
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 0.6rem;
+  font-weight: 800;
+  padding: 1px 4px;
+  border-radius: 4px;
+  animation: pulseRed 1s infinite alternate;
+}
+
+@keyframes pulseRed {
+  0% { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
+.live-lb-items {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 140px;
+  overflow-y: auto;
+}
+
+.live-lb-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.74rem;
+  padding: 2px 4px;
+  border-radius: 4px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+}
+
+.live-lb-row.is-you {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  font-weight: 700;
+}
+
+.live-lb-left {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+}
+
+.live-lb-rank {
+  font-weight: 800;
+  color: #64748b;
+  width: 14px;
+}
+
+.live-lb-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 75px;
+}
+
+.live-lb-right {
+  font-weight: 700;
+  color: var(--color-success);
 }
 
 /* Opponent Cards */
 .opponents-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .opponent-card {
   background: #ffffff;
   border: 1.5px solid #d1d5db;
   border-radius: 10px;
-  padding: 8px 10px;
+  padding: 7px 9px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .opponent-card-header {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .opponent-avatar {
-  width: 40px;
-  height: 40px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   overflow: hidden;
   flex-shrink: 0;
@@ -706,7 +970,7 @@ body {
 
 .opponent-name {
   font-weight: 700;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: #1f2937;
   white-space: nowrap;
   overflow: hidden;
@@ -714,7 +978,7 @@ body {
 }
 
 .opponent-status {
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   font-weight: 600;
   color: #6b7280;
 }
@@ -729,32 +993,23 @@ body {
   justify-content: flex-end;
 }
 
-/* Mini Grid (5 cols x 6 rows) */
+/* Mini Grid (5 cols x dynamic rows: 5, 6, or 8) */
 .mini-grid {
   display: grid;
-  grid-template-columns: repeat(5, 9px);
-  grid-template-rows: repeat(6, 9px);
-  gap: 2.5px;
+  grid-template-columns: repeat(5, 8.5px);
+  gap: 2px;
 }
 
 .mini-cell {
-  width: 9px;
-  height: 9px;
+  width: 8.5px;
+  height: 8.5px;
   border-radius: 1.5px;
   background-color: #e5e7eb;
 }
 
-.mini-cell.correct {
-  background-color: var(--color-correct);
-}
-
-.mini-cell.present {
-  background-color: var(--color-present);
-}
-
-.mini-cell.absent {
-  background-color: var(--color-absent);
-}
+.mini-cell.correct { background-color: var(--color-correct); }
+.mini-cell.present { background-color: var(--color-present); }
+.mini-cell.absent { background-color: var(--color-absent); }
 
 /* Center Column: Wordle Board + Keyboard */
 .wordle-center-column {
@@ -771,10 +1026,10 @@ body {
   top: -12px;
   background: #111827;
   color: #ffffff;
-  padding: 8px 16px;
+  padding: 7px 16px;
   border-radius: 6px;
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   z-index: 20;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
 }
@@ -783,29 +1038,50 @@ body {
   display: none;
 }
 
-/* Main 5x6 Board */
+/* Main Board Grid */
 .wordle-board {
   display: grid;
-  grid-template-rows: repeat(6, 1fr);
-  gap: 6px;
-  margin-bottom: 24px;
+  gap: 5px;
+  margin-bottom: 18px;
+}
+
+/* 6-Row Default Board */
+.wordle-board.rows-6 .board-tile {
+  width: 58px;
+  height: 58px;
+  font-size: 1.95rem;
+}
+
+/* 8-Row Board (Mode 2) */
+.wordle-board.rows-8 {
+  gap: 4px;
+}
+
+.wordle-board.rows-8 .board-tile {
+  width: 48px;
+  height: 48px;
+  font-size: 1.6rem;
+}
+
+/* 5-Row Board (Mode 3) */
+.wordle-board.rows-5 .board-tile {
+  width: 60px;
+  height: 60px;
+  font-size: 2rem;
 }
 
 .board-row {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 6px;
+  gap: 5px;
 }
 
 .board-tile {
-  width: 58px;
-  height: 58px;
   border: 2px solid var(--color-tile-border);
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: inherit;
-  font-size: 1.95rem;
   font-weight: 800;
   text-transform: uppercase;
   color: #0f172a;
@@ -894,7 +1170,7 @@ body {
   max-width: 480px;
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 6px;
 }
 
 .keyboard-row {
@@ -905,7 +1181,7 @@ body {
 }
 
 .key {
-  height: 52px;
+  height: 50px;
   flex: 1;
   background-color: var(--color-key-bg);
   color: var(--color-key-text);
@@ -978,7 +1254,7 @@ body {
   max-height: 90vh;
   overflow-y: auto;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  padding: 28px 24px;
+  padding: 26px 22px;
   text-align: center;
 }
 
@@ -995,10 +1271,10 @@ body {
 
 .modal-title {
   font-family: var(--font-heading);
-  font-size: 1.7rem;
+  font-size: 1.65rem;
   font-weight: 800;
   color: #0f172a;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .secret-word-reveal {
@@ -1006,9 +1282,13 @@ body {
   align-items: center;
   gap: 8px;
   background: #f1f5f9;
-  padding: 6px 16px;
+  padding: 5px 14px;
   border-radius: 20px;
-  margin-bottom: 20px;
+  margin-bottom: 18px;
+}
+
+.secret-word-reveal.hidden {
+  display: none;
 }
 
 .reveal-label {
@@ -1031,8 +1311,8 @@ body {
   justify-content: center;
   align-items: flex-end;
   gap: 12px;
-  margin-bottom: 24px;
-  padding-top: 10px;
+  margin-bottom: 22px;
+  padding-top: 8px;
 }
 
 .podium-spot {
@@ -1044,8 +1324,8 @@ body {
 }
 
 .podium-avatar {
-  width: 48px;
-  height: 48px;
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
   overflow: hidden;
   margin-bottom: 6px;
@@ -1053,8 +1333,8 @@ body {
 }
 
 .podium-spot.first .podium-avatar {
-  width: 58px;
-  height: 58px;
+  width: 56px;
+  height: 56px;
   border-color: #eab308;
   box-shadow: 0 0 12px rgba(234, 179, 8, 0.4);
 }
@@ -1079,7 +1359,7 @@ body {
 
 .podium-stats {
   font-size: 0.72rem;
-  font-weight: 600;
+  font-weight: 700;
   color: #64748b;
   margin-bottom: 6px;
 }
@@ -1097,34 +1377,34 @@ body {
 }
 
 .podium-spot.first .podium-pillar {
-  height: 80px;
+  height: 75px;
   background: linear-gradient(180deg, #facc15 0%, #ca8a04 100%);
 }
 
 .podium-spot.second .podium-pillar {
-  height: 60px;
+  height: 55px;
   background: linear-gradient(180deg, #cbd5e1 0%, #94a3b8 100%);
 }
 
 .podium-spot.third .podium-pillar {
-  height: 45px;
+  height: 40px;
   background: linear-gradient(180deg, #fdba74 0%, #ea580c 100%);
 }
 
 /* Leaderboard List */
 .leaderboard-table-wrapper {
   text-align: left;
-  margin-bottom: 24px;
+  margin-bottom: 22px;
 }
 
 .leaderboard-heading {
-  font-size: 1rem;
-  font-weight: 700;
+  font-size: 0.95rem;
+  font-weight: 800;
   color: #334155;
 }
 
 .ranking-rule-note {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: #94a3b8;
   margin-bottom: 10px;
 }
@@ -1132,7 +1412,7 @@ body {
 .leaderboard-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 7px;
 }
 
 .leaderboard-row {
@@ -1196,7 +1476,7 @@ body {
 }
 
 .score-time {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 600;
   color: #64748b;
 }
@@ -1224,6 +1504,10 @@ body {
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
+  .mode-cards-grid {
+    grid-template-columns: 1fr;
+  }
+
   .game-container {
     flex-direction: column;
     align-items: center;
@@ -1233,49 +1517,67 @@ body {
   .opponents-sidebar {
     width: 100%;
     padding-right: 0;
-    margin-bottom: 16px;
-    flex-direction: row;
-    overflow-x: auto;
-    padding-bottom: 6px;
-  }
-
-  .invite-friends-btn {
-    width: auto;
-    flex-shrink: 0;
+    margin-bottom: 12px;
+    flex-direction: column;
   }
 
   .opponents-list {
     flex-direction: row;
+    overflow-x: auto;
     gap: 8px;
+    padding-bottom: 4px;
   }
 
   .opponent-card {
-    min-width: 120px;
-    margin-bottom: 0;
+    min-width: 125px;
   }
 
-  .board-tile {
-    width: 48px;
-    height: 48px;
-    font-size: 1.6rem;
+  .wordle-board.rows-6 .board-tile {
+    width: 46px;
+    height: 46px;
+    font-size: 1.55rem;
+  }
+
+  .wordle-board.rows-8 .board-tile {
+    width: 40px;
+    height: 40px;
+    font-size: 1.35rem;
+  }
+
+  .wordle-board.rows-5 .board-tile {
+    width: 50px;
+    height: 50px;
+    font-size: 1.7rem;
   }
 
   .key {
-    height: 46px;
-    font-size: 1rem;
+    height: 44px;
+    font-size: 0.95rem;
   }
 }
 
 @media (max-width: 400px) {
-  .board-tile {
-    width: 42px;
-    height: 42px;
-    font-size: 1.4rem;
+  .wordle-board.rows-6 .board-tile {
+    width: 40px;
+    height: 40px;
+    font-size: 1.3rem;
+  }
+
+  .wordle-board.rows-8 .board-tile {
+    width: 36px;
+    height: 36px;
+    font-size: 1.15rem;
+  }
+
+  .wordle-board.rows-5 .board-tile {
+    width: 44px;
+    height: 44px;
+    font-size: 1.45rem;
   }
 
   .key {
-    height: 42px;
-    font-size: 0.9rem;
+    height: 40px;
+    font-size: 0.85rem;
   }
 
   .key.key-wide {

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Wordle Online Battle - 1-8 Players</title>
+  <title>Wordle Online Battle - 3 Game Modes (1-8 Players)</title>
   <link rel="stylesheet" href="style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -26,7 +26,7 @@
         <div class="logo-tile tile-green">E</div>
       </div>
       <h1 class="game-title">WORDLE BATTLE</h1>
-      <p class="game-subtitle">Live 1–8 player room battle! Fewest moves wins. Fastest time breaks ties.</p>
+      <p class="game-subtitle">Live 1–8 player room battle! 3 exciting game modes.</p>
 
       <div class="setup-group">
         <label for="player-name-input">Your Nickname</label>
@@ -75,6 +75,77 @@
         </div>
       </div>
 
+      <!-- GAME MODE SELECTION SECTION -->
+      <div class="mode-select-section">
+        <div class="section-title">
+          <span>Game Mode</span>
+          <span id="mode-role-indicator" class="count-pill">Host selects</span>
+        </div>
+
+        <div class="mode-cards-grid">
+          <!-- Mode 1 Card -->
+          <div class="mode-card active" data-mode="mode1">
+            <div class="mode-card-header">
+              <span class="mode-icon">🏆</span>
+              <span class="mode-title">Mode 1: Classic</span>
+            </div>
+            <p class="mode-desc">1 shared word, 6 guesses. Least moves wins, fastest time breaks ties.</p>
+          </div>
+
+          <!-- Mode 2 Card -->
+          <div class="mode-card" data-mode="mode2">
+            <div class="mode-card-header">
+              <span class="mode-icon">⚡</span>
+              <span class="mode-title">Mode 2: Time Rush</span>
+            </div>
+            <p class="mode-desc">Endless words in X mins. 8 guesses per word. Most words solved wins!</p>
+          </div>
+
+          <!-- Mode 3 Card -->
+          <div class="mode-card" data-mode="mode3">
+            <div class="mode-card-header">
+              <span class="mode-icon">🎯</span>
+              <span class="mode-title">Mode 3: Sprint</span>
+            </div>
+            <p class="mode-desc">N questions with time limit. 5 guesses only per word. Most solved wins!</p>
+          </div>
+        </div>
+
+        <!-- Mode Specific Settings (Host Editable) -->
+        <div id="mode-settings-box" class="mode-settings-box hidden">
+          <!-- Time Limit Control (Mode 2 & 3) -->
+          <div id="time-limit-group" class="setting-row hidden">
+            <label class="setting-label">⏱️ Time Limit:</label>
+            <div class="pill-options" id="time-limit-pills">
+              <button class="pill-btn" data-time="2">2 min</button>
+              <button class="pill-btn" data-time="3">3 min</button>
+              <button class="pill-btn active" data-time="5">5 min</button>
+              <button class="pill-btn" data-time="8">8 min</button>
+              <button class="pill-btn" data-time="10">10 min</button>
+              <button class="pill-btn" data-time="15">15 min</button>
+            </div>
+          </div>
+
+          <!-- Number of Questions Control (Mode 3) -->
+          <div id="questions-count-group" class="setting-row hidden">
+            <label class="setting-label">📝 Questions:</label>
+            <div class="pill-options" id="questions-count-pills">
+              <button class="pill-btn" data-count="3">3 Words</button>
+              <button class="pill-btn active" data-count="5">5 Words</button>
+              <button class="pill-btn" data-count="7">7 Words</button>
+              <button class="pill-btn" data-count="10">10 Words</button>
+              <button class="pill-btn" data-count="15">15 Words</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mode Summary Badge for Guests -->
+        <div id="guest-mode-summary" class="guest-mode-summary">
+          <span class="summary-badge" id="summary-badge-text">Mode 1: Classic (1 Word • 6 Guesses)</span>
+        </div>
+      </div>
+
+      <!-- PLAYERS IN ROOM SECTION -->
       <div class="lobby-players-section">
         <div class="section-title">
           <span>Players in Room</span>
@@ -96,7 +167,7 @@
     </div>
   </div>
 
-  <!-- VIEW 3: IN-GAME BATTLE (Matching the uploaded image) -->
+  <!-- VIEW 3: IN-GAME BATTLE -->
   <div id="view-game" class="view">
     <!-- Top Game Bar -->
     <header class="game-header">
@@ -110,14 +181,20 @@
       </div>
       
       <div class="header-center">
-        <div class="timer-badge">
-          <span class="timer-icon">⏱️</span>
+        <div class="header-mode-badge" id="game-mode-badge">Classic</div>
+        <div class="timer-badge" id="game-timer-badge">
+          <span class="timer-icon" id="game-timer-icon">⏱️</span>
           <span id="game-timer">00:00</span>
         </div>
       </div>
 
       <div class="header-right">
-        <div class="round-badge" id="game-round-badge">Round 1</div>
+        <!-- Live score / word indicator for Mode 2 & 3 -->
+        <div class="game-score-badge hidden" id="game-score-badge">
+          <span id="score-solved-count">0 Solved</span>
+          <span class="score-divider">•</span>
+          <span id="score-word-indicator">Word #1</span>
+        </div>
         <button id="btn-leave-game" class="btn-icon-only" title="Leave Game">✕</button>
       </div>
     </header>
@@ -125,9 +202,9 @@
     <!-- Main Game Container -->
     <main class="game-container">
       
-      <!-- Left Column: Opponents Sidebar (Matching the screenshot) -->
+      <!-- Left Column: Opponents Sidebar & Live Leaderboard -->
       <aside class="opponents-sidebar">
-        <!-- Invite friends pill matching the screenshot -->
+        <!-- Invite friends pill -->
         <button class="invite-friends-btn" id="btn-invite-sidebar" title="Share room code with friends">
           <div class="invite-icon-circle">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
@@ -140,20 +217,31 @@
           </div>
         </button>
 
+        <!-- Live Leaderboard Widget for Mode 2 & 3 -->
+        <div id="live-leaderboard-widget" class="live-leaderboard-widget hidden">
+          <div class="live-lb-header">
+            <span>📊 Live Standings</span>
+            <span class="live-lb-badge">LIVE</span>
+          </div>
+          <div id="live-lb-items" class="live-lb-items">
+            <!-- Dynamically populated live standings -->
+          </div>
+        </div>
+
         <!-- Live Opponent Cards List -->
         <div id="opponents-list" class="opponents-list">
           <!-- Dynamically injected opponent cards with avatar + mini grid -->
         </div>
       </aside>
 
-      <!-- Center / Right Column: Main Wordle Board & Virtual Keyboard -->
+      <!-- Center Column: Wordle Board & Virtual Keyboard -->
       <section class="wordle-center-column">
         <!-- Notification Banner inside board -->
         <div id="board-alert" class="board-alert hidden"></div>
 
-        <!-- 5x6 Board -->
+        <!-- Dynamic Board (5x6, 5x8, or 5x5) -->
         <div id="wordle-board" class="wordle-board">
-          <!-- 6 rows x 5 tiles generated in app.js -->
+          <!-- Rows generated dynamically in app.js -->
         </div>
 
         <!-- Virtual Keyboard -->
@@ -212,8 +300,8 @@
     <div class="modal-card">
       <div class="modal-header">
         <div class="winner-trophy">🏆</div>
-        <h2 class="modal-title">ROUND COMPLETED!</h2>
-        <div class="secret-word-reveal">
+        <h2 class="modal-title" id="results-modal-title">GAME FINISHED!</h2>
+        <div class="secret-word-reveal" id="results-secret-reveal">
           <span class="reveal-label">Secret Word:</span>
           <span id="reveal-word" class="reveal-word-text">-----</span>
         </div>
@@ -225,7 +313,7 @@
       <!-- Complete Leaderboard List -->
       <div class="leaderboard-table-wrapper">
         <h3 class="leaderboard-heading">Final Standings</h3>
-        <p class="ranking-rule-note">Ranked by: 1) Least Moves &nbsp;•&nbsp; 2) Fastest Time</p>
+        <p class="ranking-rule-note" id="results-ranking-rule-note">Ranked by: 1) Most Solved • 2) Fewer Guesses • 3) Fewer Misses</p>
         <div id="leaderboard-list" class="leaderboard-list"></div>
       </div>
 
