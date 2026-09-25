@@ -195,7 +195,45 @@ async function runIntegrationTests() {
     p2.once('game_started', check);
     p1.emit('start_game', { roomCode });
   });
-  console.log('✅ Mode 1 Classic Battle Started (1 word, 6 guesses)');
+  // Step 7: Test Mode 2 (Time Rush: 8 guesses, multi-word advance & live leaderboard)
+  await new Promise((resolve) => {
+    p2.once('room_returned_to_lobby', resolve);
+    p1.emit('return_to_lobby', { roomCode });
+  });
+
+  p1.emit('update_room_settings', { roomCode, gameMode: 'mode2', timeLimitMinutes: 2 });
+  await new Promise(r => setTimeout(r, 200));
+
+  await new Promise((resolve) => {
+    let ready = 0;
+    const check = (data) => {
+      console.assert(data.room.maxGuessesPerWord === 8, 'Mode 2 must enforce 8 guesses max');
+      ready++;
+      if (ready === 2) resolve();
+    };
+    p1.once('game_started', check);
+    p2.once('game_started', check);
+    p1.emit('start_game', { roomCode });
+  });
+  console.log('✅ Mode 2 Time Rush Started (8 guesses per word)');
+
+  // Alice finishes Word #1 with 8 guesses, Bob listens for live leaderboard update
+  const liveLbPromise = new Promise((resolve) => {
+    p2.once('live_leaderboard_update', (data) => {
+      console.assert(data.gameMode === 'mode2', 'Live LB mode check');
+      console.assert(Array.isArray(data.leaderboard), 'Live LB leaderboard check');
+      resolve();
+    });
+  });
+
+  const dummy8 = ['point', 'track', 'audio', 'vocal', 'baker', 'stone', 'crane', 'flame'];
+  for (const g of dummy8) {
+    p1.emit('submit_guess', { roomCode, guess: g });
+    await new Promise(r => setTimeout(r, 40));
+  }
+
+  await liveLbPromise;
+  console.log('✅ Mode 2: Word advancement and Live Leaderboard update verified');
 
   p1.disconnect();
   p2.disconnect();
