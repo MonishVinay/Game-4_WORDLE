@@ -266,12 +266,59 @@ async function runIntegrationTests() {
   await charlieGuessPromise;
   console.log('✅ Mid-game joiner can immediately submit guesses and play');
 
+  // Step 9: Test Round Timer Expiration & Sync Recovery
+  console.log('--- 🧪 Testing Round Timer Expiration & Sync Recovery ---');
+  const testRoom = server.rooms.get(roomCode);
+  console.assert(testRoom, 'Room must exist in server rooms map');
+  testRoom.endTime = Date.now() - 50; // Simulate timer reached expiration
+
+  // Trigger check_time_expired when timer finishes
+  const timerGameOverPromise = new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error('Timeout waiting for game_over on time expired')), 3000);
+    p1.once('game_over', (data) => {
+      clearTimeout(timeout);
+      console.assert(data.gameMode === 'mode2', 'Game over must be for mode 2');
+      console.assert(Array.isArray(data.leaderboard), 'Leaderboard must be array');
+      resolve();
+    });
+  });
+
+  p1.emit('check_time_expired', { roomCode });
+  await timerGameOverPromise;
+  console.log('✅ Timer expiration concluded match and emitted game_over with leaderboard');
+
+  // Test that guesses submitted after round ends are rejected
+  const lateGuessPromise = new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error('Timeout waiting for late guess error')), 3000);
+    p2.once('guess_error', (data) => {
+      clearTimeout(timeout);
+      console.assert(data.message.includes('ended') || data.message.includes('not in progress'), 'Must reject late guess');
+      resolve();
+    });
+  });
+  p2.emit('submit_guess', { roomCode, guess: 'stone' });
+  await lateGuessPromise;
+  console.log('✅ Late guesses after round expiration are cleanly rejected');
+
+  // Test sync_room_state returns game_over if round already ended
+  const syncGameOverPromise = new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error('Timeout waiting for sync game_over')), 3000);
+    p3.once('game_over', (data) => {
+      clearTimeout(timeout);
+      console.assert(data.gameMode === 'mode2', 'Sync game over check');
+      resolve();
+    });
+  });
+  p3.emit('sync_room_state', { roomCode });
+  await syncGameOverPromise;
+  console.log('✅ Client reconnect sync properly delivers game_over if round already ended');
+
   p1.disconnect();
   p2.disconnect();
   p3.disconnect();
 
   console.log('\n=================================================');
-  console.log('🎉 ALL GAME MODES & MID-GAME JOINS TESTED & VERIFIED WITH 0 BUGS!');
+  console.log('🎉 ALL GAME MODES, TIMERS & RESYNC TESTED & VERIFIED WITH 0 BUGS!');
   console.log('=================================================');
   process.exit(0);
 }

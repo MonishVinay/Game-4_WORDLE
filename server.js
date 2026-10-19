@@ -247,13 +247,15 @@ io.on('connection', (socket) => {
       gameState: 'lobby',
       gameMode: 'mode1', // 'mode1' | 'mode2' | 'mode3'
       timeLimitMinutes: 5,
-      timeLimitSeconds: 0,
+      timeLimitSeconds: 300,
       numQuestions: 5,
       maxGuessesPerWord: 6,
       roundNumber: 1,
       wordSequence: [],
       roundStartTime: null,
-      timer: null
+      endTime: null,
+      timer: null,
+      heartbeatTimer: null
     };
 
     rooms.set(code, room);
@@ -295,6 +297,11 @@ io.on('connection', (socket) => {
     room.players.set(socket.id, player);
     socket.join(code);
 
+    // If room is playing but round time has already expired, end game immediately
+    if (room.gameState === 'playing' && room.timeLimitSeconds > 0 && room.endTime && Date.now() >= room.endTime) {
+      endGame(room);
+    }
+
     socket.emit('room_joined', sanitizeRoomForClient(room, socket.id));
     io.to(code).emit('room_updated', sanitizeRoomForClient(room, null));
     console.log(`${player.name} joined room ${code}`);
@@ -322,7 +329,7 @@ io.on('connection', (socket) => {
     // Update max guesses based on mode
     if (room.gameMode === 'mode1') {
       room.maxGuessesPerWord = 6;
-      room.timeLimitSeconds = 0;
+      room.timeLimitSeconds = 300; // 5 min safety cap so Mode 1 never hangs indefinitely
     } else if (room.gameMode === 'mode2') {
       room.maxGuessesPerWord = 8; // Mode 2: 8 guesses per word
       room.timeLimitSeconds = room.timeLimitMinutes * 60;
@@ -338,6 +345,10 @@ io.on('connection', (socket) => {
     if (room.timer) {
       clearTimeout(room.timer);
       room.timer = null;
+    }
+    if (room.heartbeatTimer) {
+      clearInterval(room.heartbeatTimer);
+      room.heartbeatTimer = null;
     }
     room.gameState = 'round_end';
     const leaderboard = computeLeaderboard(room);
@@ -360,11 +371,15 @@ io.on('connection', (socket) => {
       clearTimeout(room.timer);
       room.timer = null;
     }
+    if (room.heartbeatTimer) {
+      clearInterval(room.heartbeatTimer);
+      room.heartbeatTimer = null;
+    }
 
-    // Configure max guesses per word
+    // Configure max guesses and time limits per word/round
     if (room.gameMode === 'mode1') {
       room.maxGuessesPerWord = 6;
-      room.timeLimitSeconds = 0;
+      room.timeLimitSeconds = 300; // 5 min safety cap
     } else if (room.gameMode === 'mode2') {
       room.maxGuessesPerWord = 8;
       room.timeLimitSeconds = room.timeLimitMinutes * 60;
@@ -402,15 +417,30 @@ io.on('connection', (socket) => {
 
     room.gameState = 'playing';
     room.roundStartTime = Date.now();
+    room.endTime = room.timeLimitSeconds > 0 ? room.roundStartTime + room.timeLimitSeconds * 1000 : null;
 
-    // Set countdown timer for Mode 2 and Mode 3
+    // Set countdown timer & active 1-second heartbeat interval
     if (room.timeLimitSeconds > 0) {
+      // 1. Primary timeout: triggers at exact round end
       room.timer = setTimeout(() => {
         if (room.gameState === 'playing') {
-          console.log(`[Room ${room.code}] Timer expired (${room.timeLimitMinutes}m). Ending game.`);
+          console.log(`[Room ${room.code}] Round timer expired (${room.timeLimitSeconds}s). Ending game.`);
           endGame(room);
         }
-      }, room.timeLimitSeconds * 1000 + 500);
+      }, room.timeLimitSeconds * 1000);
+
+      // 2. Active 1s heartbeat checker: ensures match ALWAYS ends even if setTimeout drifted or system slept
+      room.heartbeatTimer = setInterval(() => {
+        if (room.gameState !== 'playing') {
+          if (room.heartbeatTimer) clearInterval(room.heartbeatTimer);
+          room.heartbeatTimer = null;
+          return;
+        }
+        if (room.endTime && Date.now() >= room.endTime) {
+          console.log(`[Room ${room.code}] Heartbeat interval detected round time expired. Ending game.`);
+          endGame(room);
+        }
+      }, 1000);
     }
 
     io.to(room.code).emit('game_started', {
@@ -430,7 +460,16 @@ io.on('connection', (socket) => {
   socket.on('submit_guess', ({ roomCode, guess }) => {
     const code = roomCode || currentRoomCode;
     const room = rooms.get(code);
-    if (!room || room.gameState !== 'playing') return;
+    if (!room) return;
+    if (room.gameState !== 'playing') {
+      return socket.emit('guess_error', { message: 'Match is not in progress.' });
+    }
+
+    // Enforce round time limit: if round time has elapsed, immediately conclude game
+    if (room.timeLimitSeconds > 0 && room.endTime && Date.now() >= room.endTime) {
+      endGame(room);
+      return socket.emit('guess_error', { message: "Time's up! Round ended." });
+    }
 
     const player = room.players.get(socket.id);
     if (!player || player.status !== 'playing') return;
@@ -570,6 +609,10 @@ io.on('connection', (socket) => {
       clearTimeout(room.timer);
       room.timer = null;
     }
+    if (room.heartbeatTimer) {
+      clearInterval(room.heartbeatTimer);
+      room.heartbeatTimer = null;
+    }
     room.gameState = 'lobby';
     for (const p of room.players.values()) {
       p.status = 'lobby';
@@ -586,6 +629,48 @@ io.on('connection', (socket) => {
     io.to(code).emit('room_returned_to_lobby', sanitizeRoomForClient(room, null));
   });
 
+  socket.on('check_time_expired', ({ roomCode }) => {
+    const code = roomCode || currentRoomCode;
+    const room = rooms.get(code);
+    if (!room) return;
+
+    if (room.gameState === 'playing') {
+      if (room.timeLimitSeconds > 0 && room.endTime && Date.now() >= (room.endTime - 500)) {
+        console.log(`[Room ${room.code}] Client check_time_expired triggered endGame.`);
+        endGame(room);
+      }
+    } else if (room.gameState === 'round_end') {
+      // Re-send game_over directly to this socket in case it was missed
+      socket.emit('game_over', {
+        gameMode: room.gameMode,
+        targetWord: room.gameMode === 'mode1' && room.wordSequence.length > 0 ? room.wordSequence[0].toUpperCase() : '',
+        leaderboard: computeLeaderboard(room),
+        roundNumber: room.roundNumber
+      });
+    }
+  });
+
+  socket.on('sync_room_state', ({ roomCode }) => {
+    const code = roomCode || currentRoomCode;
+    const room = rooms.get(code);
+    if (!room) return;
+
+    if (room.gameState === 'playing' && room.timeLimitSeconds > 0 && room.endTime && Date.now() >= room.endTime) {
+      endGame(room);
+      return;
+    }
+
+    socket.emit('room_updated', sanitizeRoomForClient(room, socket.id));
+    if (room.gameState === 'round_end') {
+      socket.emit('game_over', {
+        gameMode: room.gameMode,
+        targetWord: room.gameMode === 'mode1' && room.wordSequence.length > 0 ? room.wordSequence[0].toUpperCase() : '',
+        leaderboard: computeLeaderboard(room),
+        roundNumber: room.roundNumber
+      });
+    }
+  });
+
   socket.on('disconnect', () => {
     if (!currentRoomCode) return;
     const room = rooms.get(currentRoomCode);
@@ -596,6 +681,7 @@ io.on('connection', (socket) => {
 
     if (room.players.size === 0) {
       if (room.timer) clearTimeout(room.timer);
+      if (room.heartbeatTimer) clearInterval(room.heartbeatTimer);
       rooms.delete(currentRoomCode);
       console.log(`Room ${currentRoomCode} deleted (empty)`);
       return;
@@ -635,3 +721,5 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`   http://localhost:${PORT}`);
   console.log(`===============================================`);
 });
+
+module.exports = { server, io, rooms, evaluateGuess, computeLeaderboard, targetWords, allowedGuessesSet };

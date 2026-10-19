@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let selectedAvatarId = 0;
   let currentRound = 1;
   let roundStartTime = null;
+  let serverClockOffset = 0;
   let timerInterval = null;
 
   // Game Mode & Settings State
@@ -335,6 +336,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // -------------------------------------------------------------
   socket.on('connect', () => {
     myPlayerId = socket.id;
+    if (currentRoomCode && currentView === 'game') {
+      socket.emit('sync_room_state', { roomCode: currentRoomCode });
+    }
   });
 
   socket.on('join_error', ({ message }) => {
@@ -346,6 +350,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (room.gameState === 'playing') {
       currentRound = room.roundNumber || 1;
       roundStartTime = room.roundStartTime;
+      serverClockOffset = (room.roundStartTime ? room.roundStartTime - Date.now() : 0);
       modalResults.classList.add('hidden');
       setupGameBoard();
       switchView('game');
@@ -376,6 +381,7 @@ document.addEventListener('DOMContentLoaded', () => {
   socket.on('game_started', ({ roundNumber, roundStartTime: startTime, room }) => {
     currentRound = roundNumber;
     roundStartTime = startTime;
+    serverClockOffset = (startTime ? startTime - Date.now() : 0);
     modalResults.classList.add('hidden');
     handleRoomUpdate(room);
     setupGameBoard();
@@ -888,7 +894,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function updateTimerDisplay() {
     if (!roundStartTime) return;
-    const elapsedSec = Math.floor((Date.now() - roundStartTime) / 1000);
+    const nowServerSynced = Date.now() + (serverClockOffset || 0);
+    const elapsedSec = Math.floor((nowServerSynced - roundStartTime) / 1000);
 
     if (gameMode === 'mode1') {
       gameTimerIcon.textContent = '⏱️';
@@ -896,6 +903,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const mins = String(Math.floor(elapsedSec / 60)).padStart(2, '0');
       const secs = String(elapsedSec % 60).padStart(2, '0');
       gameTimer.textContent = `${mins}:${secs}`;
+
+      // Mode 1: 5-minute safety cap ensures match concludes even if opponents are AFK
+      if (timeLimitSeconds > 0 && elapsedSec >= timeLimitSeconds) {
+        stopTimer();
+        isInputLocked = true;
+        socket.emit('check_time_expired', { roomCode: currentRoomCode });
+      }
     } else {
       // Countdown timer for Mode 2 and Mode 3
       gameTimerIcon.textContent = '⏳';
@@ -912,9 +926,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (remainingSec <= 0) {
         stopTimer();
+        gameTimer.textContent = '00:00';
+        gameTimerBadge.classList.add('warning');
+        isInputLocked = true;
+
+        // Immediately signal server that round timer has reached zero
+        socket.emit('check_time_expired', { roomCode: currentRoomCode });
+
+        // Fallback: If game_over modal doesn't open within 1.5 seconds, resync room state
+        setTimeout(() => {
+          if (currentView === 'game' && modalResults.classList.contains('hidden')) {
+            socket.emit('sync_room_state', { roomCode: currentRoomCode });
+          }
+        }, 1500);
       }
     }
   }
+
+  // When user unlocks phone or switches back to tab, sync timer and state immediately
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && currentView === 'game') {
+      updateTimerDisplay();
+      if (currentRoomCode) {
+        socket.emit('sync_room_state', { roomCode: currentRoomCode });
+      }
+    }
+  });
 
   // -------------------------------------------------------------
   // GAME OVER & LEADERBOARD MODAL
