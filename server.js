@@ -280,7 +280,7 @@ io.on('connection', (socket) => {
       id: socket.id,
       name: (playerName || `Player ${room.players.size + 1}`).trim().slice(0, 15),
       avatarId: Number(avatarId) || (room.players.size % 8),
-      status: room.gameState === 'playing' ? 'spectating' : 'lobby',
+      status: room.gameState === 'playing' ? 'playing' : 'lobby',
       currentWordIndex: 0,
       guesses: [],
       numGuesses: 0,

@@ -244,6 +244,17 @@
           <!-- Rows generated dynamically in app.js -->
         </div>
 
+        <!-- Hidden Mobile Keyboard Input for Native Phone Typing -->
+        <input type="text" id="mobile-keyboard-input" class="mobile-keyboard-input" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" inputmode="text" enterkeyhint="go" aria-label="Wordle input" />
+
+        <!-- Mobile Keyboard Helper Bar -->
+        <div class="mobile-keyboard-bar">
+          <button id="btn-toggle-mobile-kbd" class="btn-toggle-mobile-kbd" type="button" title="Tap to open phone keyboard">
+            <span class="kbd-icon">⌨️</span>
+            <span id="kbd-status-text">Tap to type with phone keyboard</span>
+          </button>
+        </div>
+
         <!-- Virtual Keyboard -->
         <div id="virtual-keyboard" class="keyboard">
           <!-- Row 1 -->

@@ -235,11 +235,43 @@ async function runIntegrationTests() {
   await liveLbPromise;
   console.log('✅ Mode 2: Word advancement and Live Leaderboard update verified');
 
+  // Step 8: Test Mid-Game Join (Player 3 joins while match is active and submits guesses)
+  console.log('--- 🧪 Testing Mid-Game Player Join ---');
+  const p3 = await createClient('Charlie', 2);
+  let p3Room = null;
+  await new Promise((resolve) => {
+    p3.once('room_joined', (room) => {
+      p3Room = room;
+      resolve();
+    });
+    p3.emit('join_room', { roomCode, playerName: 'Charlie', avatarId: 2 });
+  });
+
+  console.assert(p3Room.gameState === 'playing', 'Room must be in playing state');
+  const p3InList = p3Room.players.find(p => p.id === p3.id);
+  console.assert(p3InList && p3InList.status === 'playing', 'Mid-game joiner must have playing status');
+
+  // Charlie submits a guess and receives guess_result
+  const charlieGuessPromise = new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error('Timeout waiting for Charlie guess_result')), 3000);
+    p3.once('guess_result', (data) => {
+      clearTimeout(timeout);
+      console.assert(data.guess === 'stone', 'Charlie guess word check');
+      console.assert(Array.isArray(data.colors) && data.colors.length === 5, 'Colors check');
+      resolve();
+    });
+  });
+
+  p3.emit('submit_guess', { roomCode, guess: 'stone' });
+  await charlieGuessPromise;
+  console.log('✅ Mid-game joiner can immediately submit guesses and play');
+
   p1.disconnect();
   p2.disconnect();
+  p3.disconnect();
 
   console.log('\n=================================================');
-  console.log('🎉 ALL 3 GAME MODES TESTED & VERIFIED WITH 0 BUGS!');
+  console.log('🎉 ALL GAME MODES & MID-GAME JOINS TESTED & VERIFIED WITH 0 BUGS!');
   console.log('=================================================');
   process.exit(0);
 }

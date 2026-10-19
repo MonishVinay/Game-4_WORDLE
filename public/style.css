@@ -27,10 +27,12 @@ body {
   background-color: var(--color-bg);
   color: #1e293b;
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   overflow-x: hidden;
   user-select: none;
+  overscroll-behavior-y: none;
 }
 
 /* Toast Message */
@@ -1162,6 +1164,73 @@ body {
   50% { transform: translateY(4px); }
   60% { transform: translateY(-8px); }
   80% { transform: translateY(0); }
+/* Hidden Mobile Keyboard Input for Native Phone Typing */
+.mobile-keyboard-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+  font-size: 16px; /* CRITICAL: prevents iOS Safari automatic viewport zooming */
+  caret-color: transparent;
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  z-index: -1;
+}
+
+/* Mobile Keyboard Helper Bar */
+.mobile-keyboard-bar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 10px;
+  width: 100%;
+}
+
+.btn-toggle-mobile-kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #f1f5f9;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  touch-action: manipulation;
+  user-select: none;
+}
+
+.btn-toggle-mobile-kbd:hover,
+.btn-toggle-mobile-kbd:active {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.btn-toggle-mobile-kbd.active {
+  background: #eff6ff;
+  border-color: #3b82f6;
+  color: #1d4ed8;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.btn-toggle-mobile-kbd .kbd-icon {
+  font-size: 1rem;
+}
+
+@media (min-width: 769px) {
+  .mobile-keyboard-bar {
+    display: none;
+  }
 }
 
 /* Virtual Keyboard */
@@ -1511,13 +1580,14 @@ body {
   .game-container {
     flex-direction: column;
     align-items: center;
-    padding: 12px 8px;
+    padding: 8px 6px;
+    gap: 8px;
   }
 
   .opponents-sidebar {
     width: 100%;
     padding-right: 0;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
     flex-direction: column;
   }
 
@@ -1526,10 +1596,19 @@ body {
     overflow-x: auto;
     gap: 8px;
     padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
   }
 
   .opponent-card {
-    min-width: 125px;
+    min-width: 120px;
+    padding: 8px 10px;
+  }
+
+  .wordle-board {
+    margin-bottom: 8px;
+    gap: 4px;
+    touch-action: manipulation;
+    cursor: pointer;
   }
 
   .wordle-board.rows-6 .board-tile {
@@ -1538,10 +1617,14 @@ body {
     font-size: 1.55rem;
   }
 
+  .wordle-board.rows-8 {
+    gap: 3px;
+  }
+
   .wordle-board.rows-8 .board-tile {
-    width: 40px;
-    height: 40px;
-    font-size: 1.35rem;
+    width: 38px;
+    height: 38px;
+    font-size: 1.25rem;
   }
 
   .wordle-board.rows-5 .board-tile {
@@ -1550,29 +1633,42 @@ body {
     font-size: 1.7rem;
   }
 
+  .keyboard {
+    touch-action: manipulation;
+  }
+
   .key {
     height: 44px;
     font-size: 0.95rem;
+    touch-action: manipulation;
+  }
+
+  .key.key-wide {
+    font-size: 0.72rem;
   }
 }
 
-@media (max-width: 400px) {
+@media (max-width: 420px) {
+  .game-container {
+    padding: 4px;
+  }
+
   .wordle-board.rows-6 .board-tile {
-    width: 40px;
-    height: 40px;
-    font-size: 1.3rem;
+    width: 42px;
+    height: 42px;
+    font-size: 1.35rem;
   }
 
   .wordle-board.rows-8 .board-tile {
-    width: 36px;
-    height: 36px;
+    width: 35px;
+    height: 35px;
     font-size: 1.15rem;
   }
 
   .wordle-board.rows-5 .board-tile {
-    width: 44px;
-    height: 44px;
-    font-size: 1.45rem;
+    width: 46px;
+    height: 46px;
+    font-size: 1.5rem;
   }
 
   .key {
@@ -1581,6 +1677,63 @@ body {
   }
 
   .key.key-wide {
-    font-size: 0.7rem;
+    font-size: 0.65rem;
+  }
+
+  .mobile-keyboard-bar {
+    margin-bottom: 6px;
+  }
+
+  .btn-toggle-mobile-kbd {
+    padding: 4px 10px;
+    font-size: 0.75rem;
   }
 }
+
+/* Compact display for shorter screens (mobile browsers with navigation bars) */
+@media (max-height: 740px) and (max-width: 768px) {
+  .game-header {
+    padding: 6px 12px;
+    margin-bottom: 4px;
+  }
+
+  .game-container {
+    padding: 4px 6px;
+  }
+
+  .opponents-sidebar {
+    margin-bottom: 4px;
+  }
+
+  .wordle-board {
+    margin-bottom: 6px;
+  }
+
+  .wordle-board.rows-8 .board-tile {
+    width: 34px;
+    height: 34px;
+    font-size: 1.15rem;
+  }
+
+  .wordle-board.rows-6 .board-tile {
+    width: 40px;
+    height: 40px;
+    font-size: 1.3rem;
+  }
+
+  .wordle-board.rows-5 .board-tile {
+    width: 44px;
+    height: 44px;
+    font-size: 1.4rem;
+  }
+
+  .mobile-keyboard-bar {
+    margin-bottom: 4px;
+  }
+
+  .key {
+    height: 36px;
+    font-size: 0.82rem;
+  }
+}
+
