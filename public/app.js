@@ -856,122 +856,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // -------------------------------------------------------------
-  // MOBILE & PHYSICAL KEYBOARD INTEGRATION
-  // -------------------------------------------------------------
-  const mobileKeyboardInput = document.getElementById('mobile-keyboard-input');
-  const btnToggleMobileKbd = document.getElementById('btn-toggle-mobile-kbd');
-  const kbdStatusText = document.getElementById('kbd-status-text');
-
-  function focusMobileInput() {
-    if (!mobileKeyboardInput || currentView !== 'game' || isInputLocked || myPlayerStatus !== 'playing') return;
-    try {
-      mobileKeyboardInput.focus({ preventScroll: true });
-    } catch (_) {
-      mobileKeyboardInput.focus();
-    }
-  }
-
-  // Tapping anywhere on the board or its tiles focuses phone input
-  if (wordleBoard) {
-    wordleBoard.addEventListener('click', () => {
-      focusMobileInput();
-    });
-    wordleBoard.addEventListener('touchend', () => {
-      setTimeout(focusMobileInput, 30);
-    }, { passive: true });
-  }
-
-  if (btnToggleMobileKbd) {
-    btnToggleMobileKbd.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (document.activeElement === mobileKeyboardInput) {
-        mobileKeyboardInput.blur();
-      } else {
-        focusMobileInput();
-      }
-    });
-  }
-
-  if (mobileKeyboardInput) {
-    mobileKeyboardInput.addEventListener('focus', () => {
-      if (btnToggleMobileKbd) btnToggleMobileKbd.classList.add('active');
-      if (kbdStatusText) kbdStatusText.textContent = 'Phone keyboard active';
-    });
-
-    mobileKeyboardInput.addEventListener('blur', () => {
-      if (btnToggleMobileKbd) btnToggleMobileKbd.classList.remove('active');
-      if (kbdStatusText) kbdStatusText.textContent = 'Tap to type with phone keyboard';
-    });
-
-    mobileKeyboardInput.addEventListener('keydown', (e) => {
-      if (currentView !== 'game' || isInputLocked || myPlayerStatus !== 'playing') return;
-
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        submitGuess();
-      } else if (e.key === 'Backspace' || e.key === 'Delete') {
-        e.preventDefault();
-        deleteLetter();
-      } else if (/^[a-zA-Z]$/.test(e.key)) {
-        e.preventDefault();
-        addLetter(e.key.toUpperCase());
-      }
-    });
-
-    mobileKeyboardInput.addEventListener('input', (e) => {
-      if (currentView !== 'game' || isInputLocked || myPlayerStatus !== 'playing') {
-        mobileKeyboardInput.value = '';
-        return;
-      }
-
-      if (e.inputType === 'deleteContentBackward' || e.inputType === 'deleteContentForward') {
-        deleteLetter();
-      } else if (e.inputType === 'insertLineBreak') {
-        submitGuess();
-      } else if (e.data) {
-        for (const char of e.data) {
-          if (/^[a-zA-Z]$/.test(char)) {
-            addLetter(char.toUpperCase());
-          }
-        }
-      } else if (mobileKeyboardInput.value) {
-        for (const char of mobileKeyboardInput.value) {
-          if (/^[a-zA-Z]$/.test(char)) {
-            addLetter(char.toUpperCase());
-          }
-        }
-      }
-
-      mobileKeyboardInput.value = '';
-    });
-  }
-
-  // Physical Desktop Keyboard Listener
+  // Physical Keyboard Listener
   window.addEventListener('keydown', (e) => {
-    if (e.target.tagName === 'INPUT' && e.target.id !== 'mobile-keyboard-input') return;
+    if (e.target.tagName === 'INPUT') return;
     if (e.ctrlKey || e.metaKey || e.altKey) return;
-    if (e.target.id === 'mobile-keyboard-input') return; // Handled by mobileKeyboardInput keydown
     handleKeyPress(e.key);
   });
 
-  // Virtual Keyboard Pointer & Click Listener
-  if (virtualKeyboard) {
-    virtualKeyboard.addEventListener('pointerdown', (e) => {
-      const btn = e.target.closest('.key');
-      if (btn && document.activeElement === mobileKeyboardInput) {
-        e.preventDefault(); // Don't lose soft keyboard focus when tapping on-screen buttons
-      }
-    });
-
-    virtualKeyboard.addEventListener('click', (e) => {
-      const btn = e.target.closest('.key');
-      if (!btn) return;
-      const key = btn.dataset.key;
-      handleKeyPress(key);
-    });
-  }
+  // Virtual Keyboard Click Listener
+  virtualKeyboard.addEventListener('click', (e) => {
+    const btn = e.target.closest('.key');
+    if (!btn) return;
+    const key = btn.dataset.key;
+    handleKeyPress(key);
+  });
 
   // -------------------------------------------------------------
   // TIMER (Count up for Mode 1, Countdown for Mode 2 & 3)
