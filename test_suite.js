@@ -313,6 +313,23 @@ async function runIntegrationTests() {
   await syncGameOverPromise;
   console.log('✅ Client reconnect sync properly delivers game_over if round already ended');
 
+  // Step 10: Test Leaderboard Reset on next_round
+  console.log('--- 🧪 Testing Leaderboard Reset on Next Round ---');
+  const nextRoundLbPromise = new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error('Timeout waiting for reset live_leaderboard_update on next_round')), 3000);
+    p1.once('live_leaderboard_update', (data) => {
+      clearTimeout(timeout);
+      console.assert(Array.isArray(data.leaderboard), 'Leaderboard must be array');
+      const allZero = data.leaderboard.every(p => p.wordsSolved === 0 && p.totalGuesses === 0);
+      console.assert(allZero, 'All players must have 0 wordsSolved and 0 totalGuesses on next round');
+      resolve();
+    });
+  });
+
+  p1.emit('next_round', { roomCode });
+  await nextRoundLbPromise;
+  console.log('✅ Next round cleanly resets leaderboard scores to 0 for all players');
+
   p1.disconnect();
   p2.disconnect();
   p3.disconnect();

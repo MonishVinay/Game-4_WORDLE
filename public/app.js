@@ -688,6 +688,11 @@ document.addEventListener('DOMContentLoaded', () => {
     playerGuessesHistory = [];
     boardAlert.classList.add('hidden');
 
+    // Reset previous round modal standings and sidebar live leaderboard
+    if (podiumSection) podiumSection.innerHTML = '';
+    if (leaderboardList) leaderboardList.innerHTML = '';
+    if (liveLbItems) liveLbItems.innerHTML = '';
+
     // Update Header badges
     gameModeBadge.textContent = getModeTitle(gameMode);
     updateScoreBadge();

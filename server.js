@@ -448,6 +448,14 @@ io.on('connection', (socket) => {
       roundStartTime: room.roundStartTime,
       room: sanitizeRoomForClient(room, null)
     });
+
+    // Immediately broadcast reset live leaderboard for all players in Mode 2 & Mode 3
+    if (room.gameMode === 'mode2' || room.gameMode === 'mode3') {
+      io.to(room.code).emit('live_leaderboard_update', {
+        leaderboard: computeLeaderboard(room),
+        gameMode: room.gameMode
+      });
+    }
   }
 
   socket.on('start_game', ({ roomCode }) => {
